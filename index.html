@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>TL;DW - PaLM powered Video Summarisation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@100;400;700&family=Open+Sans:wght@300;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0" />
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+    <script src="https://code.jquery.com/jquery-2.2.4.min.js" integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44=" crossorigin="anonymous"></script>
+
+
+
+    <style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+            /* font-family: 'Open Sans', sans-serif; */
+            text-align: center;
+        }
+        
+        video {
+            width: 800px;
+            border-radius: 25px;
+            /* border: solid 12px #4285F4; */
+        }
+        /* .pill {
+            background: #4285F4;
+            display: inline-block;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 40px;
+            border: black solid 3px;
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            font-size: 1.4em;
+            transition: visibility 1s, opacity 1.5s linear;
+        } */
+        
+        .selector {
+            display: inline-block;
+            cursor: pointer;
+            border-radius: 32px;
+            background-color: gray;
+            padding: 10px 15px;
+            margin: 0 5px;
+        }
+        
+        .selector.active {
+            background-color: #4285F4;
+            color: white;
+        }
+        
+        #mode-selector {
+            font-size: 1.3em;
+        }
+        
+        #q_and_a {
+            display: inline-block;
+            vertical-align: top;
+            margin-left: 20px;
+        }
+        
+        #q_and_a > h2{
+            margin-top: 0;
+        }
+        
+        #highlights {
+            margin: auto;
+            text-align: left;
+            display: block;
+            max-width: 850px;
+        }
+        
+        #highlights>h2 {
+            text-align: center;
+        }
+        
+        .highlight {
+            color: #949494;
+            cursor: pointer;
+            border: solid 5px transparent;
+            padding: 5px;
+            transition: all 0.5;
+        }
+        
+        .highlight:hover {
+            cursor: pointer;
+            border-radius: 10px;
+            border-color: #4286f47d;
+        }
+        
+        .highlight.current {
+            color: black;
+            cursor: pointer;
+            border-radius: 10px;
+            border-color: #4285F4;
+        }
+        
+        #response_time {
+            display: inline-block;
+            color: black;
+            padding: 1px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: solid black 3px;
+            background-color: white;
+            margin-top: 9px;
+        }
+        
+        #question-input {
+            padding: 10px;
+            font-size: 1em;
+            border-radius: 25px;
+            width: 250px;
+        }
+        
+        button {
+            font-size: 1.1em;
+            margin-left: 15px;
+            border-radius: 18px;
+            padding: 8px;
+            cursor: pointer;
+        }
+        
+        #response {
+            background-color: #4285F4;
+            color: white;
+            border-radius: 10px;
+            padding: 13px 13px;
+            max-width: 300px;
+        }
+        
+        .material-symbols-outlined {
+            vertical-align: text-bottom;
+        }
+        
+        .play {
+            display: inline-block;
+            color: black;
+            padding: 1px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: solid black 3px;
+            background-color: white;
+            margin-top: 9px;
+        }
+        
+        .play_highlights {
+            text-align: center;
+            margin: 0;
+        }
+        
+        .video-container {
+            display: inline-block;
+        }
+        
+        .google-blue {
+            color: #4285F4;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+        <h1>TL;D<span class="google-blue">W</span></h1>
+        <p>Video Summarization and Q&A powered by <span class="google-blue">PaLM API</span>, <span class="google-blue">Chirp Speech-to-Text</span> and <span class="google-blue">Studio Text-to-Speech</span> </p>
+        <div class="video-container">
+            <!-- <div class="pill">Kris gives a overview of machine learning</div> -->
+            <video id="video" controls src="Google I:O 2023.mp4"></video>
+        </div>
+        <!-- <div id="mode-selector">
+            <div class="selector active" id="orginal-mode">Original Video</div>
+            <div class="selector" id="tldw-mode">TL;DW Summary</div>
+        </div> -->
+
+
+        <div id="q_and_a">
+            <h2>Q&A</h2>
+            <input id="question-input" :disabled="asking" autocomplete="off" placeholder="Your question...">
+            <button onclick="ask()" :disabled="asking">Submit</button>
+            <br>
+            <p v-if="response" id="response">{{response}}
+                <br>
+                <span v-if="response_time" id="response_time" @click="set_video_time_from_action(response_time)">
+                    <span class="material-symbols-outlined">play_arrow</span>Watch in video</div>
+        </p>
+
+
+        <div id="highlights">
+            <h2 style="margin-bottom: 0;">Video highlights</h2>
+
+            <p v-if="playing_highlights" class="play_highlights">
+                <span onclick="stop_highlights()" class="play"> 
+                    <span class="material-symbols-outlined">stop</span> Stop highlights
+                </span>
+            </p>
+            <p v-else class="play_highlights">
+                <span onclick="play_highlights()" class="play"> 
+                    <span class="material-symbols-outlined">play_arrow</span>Play highlights
+                </span>
+            </p>
+
+            <p class="highlight" v-for="h in highlights" :class="{'current':h.current_highlight}" @click="set_video_time_from_action(h.time_seconds)">{{h.time_stamp}} {{h.highlight}}</p>
+        </div>
+
+        <audio id="audio" hidden></audio>
+
+
+
+
+    </div>
+
+
+    </div>
+
+
+    <script>
+        let video = null
+        let input = null
+        let time_out = null
+        let audioPlayer = null
+
+
+
+        function stop_highlights() {
+            app.playing_highlights = false
+            app.current_highlight = 0
+
+            const audioPlayer = document.getElementById('audio')
+            audioPlayer.pause()
+            video.controls = true;
+            video.pause()
+            video.volume = 1
+            clearTimeout(time_out)
+        }
+
+
+        function play_next_highlight() {
+
+            skipToTime(app.highlights[app.current_highlight].time_seconds)
+            console.log('trying to play audio')
+            audioPlayer.src = 'highlights/' + app.current_highlight.toString() + '.wav';
+            // Play the audio
+            audioPlayer.play();
+        }
+
+        function play_highlights() {
+
+            // for (let index = 0; index < app.highlights.length; index++) {
+
+            //     const element = array[index];
+
+            // 
+
+
+            video.controls = false;
+            video.volume = 0.6
+
+            console.log('play highlights')
+            app.playing_highlights = true
+            app.current_highlight = 0
+
+            play_next_highlight()
+
+        }
+
+        function skipToTime(timeInSeconds) {
+            console.log('setting', timeInSeconds)
+
+            video.currentTime = timeInSeconds;
+            video.play()
+        }
+
+
+        function convertTimeToSeconds(timeStamp) {
+            const [minutes, seconds] = timeStamp.split(':');
+            const totalSeconds = parseInt(minutes, 10) * 60 + parseInt(seconds, 10);
+            return totalSeconds;
+        }
+
+        function extractTimeStamp(text) {
+
+            // const timeStampRegex = /^\[(\d+:\d+)\]/; // Regex pattern to match [minutes:seconds]
+
+            // const matches = text.match(timeStampRegex);
+            // if (matches && matches.length > 1) {
+            //     const timeStamp = matches[1];
+            //     return timeStamp // Output: 0:03
+            // } else {
+            //     return null
+            // }
+
+
+            // const secondsRegex = /\b(\d+)\b/; // Regex pattern to match the seconds
+
+            // const matches = text.match(secondsRegex);
+            // if (matches && matches.length > 1) {
+            //     const seconds = parseInt(matches[1]);
+            //     return seconds
+            //     console.log(seconds); // Output: 32
+            // } else {
+            //     console.log("No seconds found.");
+            //     return null
+            // }
+
+
+            const secondsRegex = /\[(\d+(\.\d+)?)\]/; // Regex pattern to match the seconds in square brackets
+
+            const matches = text.match(secondsRegex);
+            if (matches && matches.length > 1) {
+                const seconds = parseFloat(matches[1]);
+                console.log(seconds); // Output: 318.0
+                return seconds
+            } else {
+                console.log("No seconds found.");
+                return null
+            }
+        }
+
+
+
+
+        function parse_answer(answer) {
+
+            if (Array.from(answer)[0] != 'A') {
+                // just print out response
+                app.response = "Sorry, I don't know"
+                app.response_time = null
+                return
+            }
+
+            const time_stamp = extractTimeStamp(answer)
+            const time_stamp_seconds = parseInt(time_stamp)
+                // const time_stamp_seconds = convertTimeToSeconds(time_stamp)
+
+            app.response_time = time_stamp_seconds
+                // app.response = answer.replace(/^\[\d+:\d+\]\s*/, '');
+
+            const result = answer.split(':').slice(1).join(':').trim();
+            app.response = result
+
+
+
+
+        }
+
+
+        function ask() {
+
+            const input = document.getElementById('question-input').value
+            console.log('asking', input)
+
+            app.asking = true
+
+            app.response = null
+            app.response_time = null
+
+            $.ajax({
+                url: "https://us-central1-generative-video-report.cloudfunctions.net/ask_video_full_prompt",
+                type: "POST",
+                dataType: 'json',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    message: input
+                }),
+                success: function(data) {
+                    // Display the output from the REST API.
+                    console.log(data.model_response)
+                    parse_answer(data.model_response)
+                    app.asking = false
+                },
+                error: function(xhr, status, error) {
+                    // Code to handle error if the AJAX call fails
+                    console.error('AJAX call error:', error);
+                    app.asking = false
+                }
+            });
+
+        }
+
+
+        const {
+            createApp
+        } = Vue
+
+        const app = createApp({
+            data() {
+
+                return {
+                    message: 'Hello Vue!',
+                    highlights: [],
+                    response: '',
+                    response_time: 0,
+                    asking: false,
+                    playing_highlights: false,
+                    current_highlight: 0
+                }
+            },
+            created() {
+                self = this
+                console.log('created')
+                fetch('highlights.json')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                        self.highlights = data.highlights
+                            // Process the loaded data here
+                    })
+                    .catch(error => console.error('Error:', error));
+
+
+            },
+            mounted() {
+
+                self = this
+
+                video = document.getElementById('video');
+
+                const HIGHLIGHT_ZONE = 15
+
+
+                video.addEventListener('timeupdate', function() {
+                    const currentTime = video.currentTime;
+                    console.log('Current time:', currentTime);
+
+                    self.highlights.forEach(element => {
+                        if ((element.time_seconds <= currentTime) && (element.time_seconds + HIGHLIGHT_ZONE > currentTime)) {
+                            element.current_highlight = true;
+                        } else {
+                            element.current_highlight = false;
+                        }
+                    });
+
+                    // Additional code here
+                    // ...
+                });
+
+                const input = document.getElementById('question-input')
+
+                input.addEventListener('keypress', function(event) {
+                    if (event.key === 'Enter') {
+                        ask()
+                    }
+                });
+
+
+                audioPlayer = document.getElementById('audio');
+
+
+                audioPlayer.addEventListener('ended', function() {
+                    // Audio has stopped playing
+                    if ((app.playing_highlights) && (app.current_highlight < app.highlights.length)) {
+
+                        time_out = setTimeout(function() {
+                            // Code to execute after 5 seconds
+                            if (app.playing_highlights) {
+                                console.log('5 seconds after audio stopped playing');
+                                app.current_highlight++;
+                                play_next_highlight()
+                            }
+                        }, 5000); // 5000 milliseconds = 5 seconds
+                    }
+                });
+
+
+
+
+            },
+
+            methods: {
+                set_video_time: (seconds) => {
+                    console.log('jump to ', seconds)
+                    skipToTime(seconds)
+                },
+
+                set_video_time_from_action: (seconds) => {
+
+                    stop_highlights()
+                    skipToTime(seconds)
+                }
+            }
+        }).mount('#app')
+    </script>
+
+
+</body>
+
+</html>
