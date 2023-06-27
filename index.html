@@ -65,7 +65,7 @@
             margin-left: 20px;
         }
         
-        #q_and_a > h2{
+        #q_and_a>h2 {
             margin-top: 0;
         }
         
@@ -162,6 +162,18 @@
         .google-blue {
             color: #4285F4;
         }
+        
+        #examples {
+            margin-top: 14px;
+            color: gray;
+            font-style: italic;
+        }
+        
+        #examples>ul {
+            text-align: left;
+            margin-top: 6px;
+            list-style-type: circle;
+        }
     </style>
 </head>
 
@@ -185,11 +197,22 @@
             <input id="question-input" :disabled="asking" autocomplete="off" placeholder="Your question...">
             <button onclick="ask()" :disabled="asking">Submit</button>
             <br>
-            <p v-if="response" id="response">{{response}}
+            <p v-if="response" id="response">
+                <span>{{response}}</span>
                 <br>
                 <span v-if="response_time" id="response_time" @click="set_video_time_from_action(response_time)">
-                    <span class="material-symbols-outlined">play_arrow</span>Watch in video</div>
-        </p>
+                    <span class="material-symbols-outlined">play_arrow</span>Watch in video</span>
+            </p>
+
+            <div id="examples">
+                try asking:
+                <ul>
+                    <li>Whats new in photos?</li>
+                    <li>Are there any new LLM models?</li>
+                    <li>Which teams are joining?</li>
+                </ul>
+            </div>
+        </div>
 
 
         <div id="highlights">
